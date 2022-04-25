@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.13.0/css/ol.css" type="text/css">
+    <style>
+        .map {
+            height: 90vh;
+            width: 100%;
+        }
+
+        #sim-controls {
+            display: flex;
+            justify-content: end;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.13.0/build/ol.js"></script>
+    <title>Flight Sim</title>
+</head>
+
+<body>
+    <div id="map" class="map"></div>
+    <!-- <script src="https://code.jquery.com/jquery-3.6.0.min.js" type="text/javascript"></script> -->
+    <!-- import the flights -->
+    <script src="flights.js" type="text/javascript"></script>
+    <script src="data-block.js" type="text/javascript"></script>
+    <script src="timer.js" type="text/javascript"></script>
+
+    <div id="sim-controls">
+        <button onclick="reloadSim()">Reload</button>
+        <div id="sim-time">00:00</div>
+        <select id="speed-playback" name="speed-playback">
+            <option id="speed-playback-default" value="1">x1</option>
+            <option value="2">x2</option>
+            <option value="4">x4</option>
+            <option value="10">x10</option>
+            <option value="20">x20</option>
+        </select>
+        <button onclick="togglePlayPause()">Play/Pause</button>
+    </div>
+
+    <table id="flights-list">
+        <tr>
+            <th>Arrival Code</th>
+            <th>Aircraft Id</th>
+            <th>Altitude</th>
+            <th>Aircraft Type</th>
+            <th>Groundspeed</th>
+            <th>Flight Route</th>
+        </tr>
+        <tbody>
+        </tbody>
+    </table>
+
+    <script type="text/javascript">
+        // const icon_url = 'https://openlayers.org/en/v4.6.5/examples/data/icon.png';
+        const icon_url = 'plane.svg';
+        const dataBlocks = [];
+        const routes = [];
+        window.flightsim = {
+            pausedInternal: false,
+            pausedListener: function (val) { },
+            set paused(val) {
+                this.pausedInternal = val;
+                this.pausedListener(val);
+            },
+            get paused() {
+                return this.pausedInternal;
+            },
+            registerListener: function (listener) {
+                this.pausedListener = listener;
+            }
+        };
+        window.timer = new Timer();
+        window.timer.start();
+
+        let playbackSpeed = document.getElementById('speed-playback').value;
+
+        // List the flights
+        for (let f of flights) {
+            const e = document.createElement("tr");
+            const htmlContent = `
+                    <td>${f.arrivalCode}</td>
+                    <td>${f.aircraftId}</td>
+                    <td>${f.altitude}</td>
+                    <td>${f.aircraftType}</td>
+                    <td>${f.groundspeed}</td>
+                    <td>${f.flightroute}</td>
+            `;
+            e.innerHTML = htmlContent;
+            document.querySelector('#flights-list > tbody').appendChild(e);
+        }
+
+        // draw the plane
+        function setPoints(flight) {
+            dataBlocks.push(new DataBlock(flight));
+        }
+
+        let lastTime = Date.now();
+        let distance = 0;
+
+        // Listener to update playback speed
+        document.getElementById('speed-playback').addEventListener('change', (event) => {
+            playbackSpeed = event.target.value;
+        });
+
+
+        function reloadSim() {
+            // Reset distance 
+            distance = 0;
+
+            // Update the input box back to original speed
+            document.getElementById('speed-playback').value = "1";
+
+            // Update the actual speed
+            playbackSpeed = document.getElementById('speed-playback').value;
+        }
+
+        // moves a single plane
+        function moveFeature(event, index) {
+            // change the number on the bottom to adjust speed
+            const speed = Number(dataBlocks[index].flight.groundspeed / 1000);
+            const time = event.frameState.time;
+            const elapsedTime = time - lastTime;
+            distance = (distance + (speed * playbackSpeed * elapsedTime) / 1e6) % 2;
+            lastTime = time;
+
+            const currentCoordinate = routes[index].getGeometry().getCoordinateAt(
+                distance > 1 ? 2 - distance : distance
+            );
+
+            const position = dataBlocks[index].getGeometry();
+            position.setCoordinates(currentCoordinate);
+            const vectorContext = ol.render.getVectorContext(event);
+            // vectorContext.setStyle(styles.geoMarker);
+            dataBlocks[index].updateStyle(position);
+            vectorContext.drawGeometry(position.clone());
+            map.render();
+        }
+
+        // move all planes
+        function moveFeatures(event) {
+            if (!window.flightsim.paused) {
+                for (let i = 0; i < dataBlocks.length; i++) {
+                    moveFeature(event, i)
+                }
+            } else {
+                map.render();
+            }
+        }
+
+        // draw invisible lines which are the paths the planes follow
+        function drawLines(flight) {
+            const origin = ol.proj.fromLonLat([flight.origin.long, flight.origin.lat]);
+            const destination = ol.proj.fromLonLat([flight.destination.long, flight.destination.lat]);
+            const feature = new ol.Feature({
+                geometry: new ol.geom.LineString([origin, destination]),
+                name: 'Line',
+            });
+            const style = [
+                // linestring
+                new ol.style.Style({
+                    stroke: new ol.style.Stroke({
+                        // color: 'green',
+                        color: [0, 0, 0, 0],
+                        width: 1
+                    })
+                })
+            ];
+            feature.setStyle(style);
+            routes.push(feature);
+        }
+
+        for (let flight of flights) {
+            setPoints(flight);
+            drawLines(flight);
+        }
+
+        // Planes
+        const vectorSourcePlanes = new ol.source.Vector({
+            features: dataBlocks
+        });
+        const vectorLayerPlanes = new ol.layer.Vector({
+            source: vectorSourcePlanes
+        });
+
+        // Routes
+        const vectorSourceRoutes = new ol.source.Vector({
+            features: routes
+        });
+        const vectorLayerRoutes = new ol.layer.Vector({
+            source: vectorSourceRoutes
+        });
+
+        // Start animating by default
+        vectorLayerPlanes.on('postrender', moveFeatures);
+
+        toggleAnimation = (paused) => {
+            playbackSpeed = document.getElementById('speed-playback').value;
+            if (paused === true) {
+                vectorLayerPlanes.un('postrender', moveFeature);
+            } else {
+                lastTime = Date.now();
+                vectorLayerPlanes.on('postrender', moveFeatures);
+            }
+        }
+
+        togglePlayPause = () => {
+            window.flightsim.paused = !window.flightsim.paused;
+            if (window.flightsim.paused) {
+                window.timer.pause();
+            } else {
+                window.timer.resume();
+            }
+        }
+
+        // // Toggle animation pause
+        window.flightsim.registerListener(toggleAnimation);
+
+        const attributions =
+            '<a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> ' +
+            '<a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>';
+
+        const map = new ol.Map({
+            target: 'map',
+            controls: [],
+            // interactions: [],
+            layers: [
+                new ol.layer.Tile({
+                    // source: new ol.source.OSM()
+                    source: new ol.source.XYZ({
+                        attributions: attributions,
+                        url: 'https://api.maptiler.com/maps/hybrid/{z}/{x}/{y}.jpg?key=' + 'sqnA3vuqXWfyY0K78JtW',
+                        tileSize: 512,
+                    }),
+                }),
+                vectorLayerPlanes,
+                vectorLayerRoutes
+            ],
+            view: new ol.View({
+                center: ol.proj.fromLonLat([-75.165222, 39.952583]),    // philly coords
+                zoom: 9,
+                // minZoom: 7,
+                // maxZoom: 13,
+            })
+        });
+    </script>
+</body>
+
+</html>
