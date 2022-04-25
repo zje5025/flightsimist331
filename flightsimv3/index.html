@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.13.0/css/ol.css" type="text/css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        .dark-mode {
+            background-color: #181818;
+            color: white;
+        }
+
+        #container {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            width: 100%;
+        }
+
+        .map {
+            height: 90vh;
+            width: 100%;
+        }
+
+        #map-container,
+        #keyboard-container,
+        #flights-list-container {
+            display: flex;
+            flex-direction: column;
+            flex-basis: 100%;
+            flex: 1;
+        }
+
+        .row {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            width: 100%;
+        }
+
+        div#map-container {
+            flex: 2;
+        }
+
+        #sim-controls {
+            display: flex;
+            justify-content: end;
+        }
+
+
+        #keyboard-container {
+            margin-top: auto;
+            padding: 20px;
+        }
+
+        #keyboard {
+            display: grid;
+            grid-template-columns: repeat(10, 60px);
+            grid-template-rows: repeat(7, 50px);
+            grid-gap: 5px;
+            padding-top: 20px;
+        }
+
+        #kb-space {
+            grid-column-start: 3;
+            grid-column-end: 10;
+        }
+
+        .grid-item {
+            border: 1px solid black;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        th {
+            text-align: left;
+        }
+
+        textarea {
+            resize: none;
+        }
+
+        .yellow {
+            background-color: yellow;
+        }
+
+        .red {
+            background-color: red;
+        }
+
+        .turquoiseblue {
+            background-color: rgba(12, 255, 255, 0.808);
+        }
+        .green {
+            background-color: rgb(6, 187, 6);
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.13.0/build/ol.js"></script>
+    <title>Flight Sim</title>
+</head>
+
+<body class="">
+    <div id="container">
+        <div class="row 1">
+
+
+            <div id="map-container">
+                <div id="map" class="map"></div>
+                <!-- <script src="https://code.jquery.com/jquery-3.6.0.min.js" type="text/javascript"></script> -->
+                <!-- import the flights -->
+                <script src="flights.js" type="text/javascript"></script>
+                <script src="data-block.js" type="text/javascript"></script>
+                <script src="timer.js" type="text/javascript"></script>
+                <script src="utils.js" type="text/javascript"></script>
+
+
+                <div id="sim-controls">
+                    <button onclick="reloadSim()">Reload</button>
+                    <div id="sim-time">00:00</div>
+                    <select id="speed-playback" name="speed-playback">
+                        <option id="speed-playback-default" value="1">x1</option>
+                        <option value="2">x2</option>
+                        <option value="4">x4</option>
+                        <option value="10">x10</option>
+                        <option value="20">x20</option>
+                    </select>
+                    <button onclick="togglePlayPause()">Play/Pause</button>
+                </div>
+            </div>
+
+            <div id="keyboard-container">
+                <textarea id="inputs" class="" rows="20" cols="1" readonly="true" disabled></textarea>
+                <input id="cmd" class="" type="text" placeholder=">" maxlength="50" autocomplete="off" autofocus />
+                <div id="keyboard">
+                    <div id="kb-m1" class="grid-item green">M1</div>
+                    <div id="kb-m2" class="grid-item green">M2</div>
+                    <div id="kb-m3" class="grid-item green">M3</div>
+                    <div id="kb-m4" class="grid-item green">M4</div>
+                    <div id="kb-con" class="grid-item">CON</div>
+                    <div id="kb-map" class="grid-item">MAP</div>
+                    <div id="kb-m5" class="grid-item green">M5</div>
+                    <div id="kb-m6" class="grid-item green">M6</div>
+                    <div id="kb-m7" class="grid-item green">M7</div>
+                    <div id="kb-m8" class="grid-item green">M8</div>
+
+                    <div id="kb-m9" class="grid-item green">M9</div>
+                    <div id="kb-m10" class="grid-item green">M10</div>
+                    <div id="kb-m11" class="grid-item green">M11</div>
+                    <div id="kb-m12" class="grid-item green">M12</div>
+                    <div id="kb-trk" class="grid-item">TRK</div>
+                    <div id="kb-usr" class="grid-item">USR</div>
+                    <div id="kb-m13" class="grid-item green">M13</div>
+                    <div id="kb-m14" class="grid-item green">M14</div>
+                    <div id="kb-m15" class="grid-item green">M15</div>
+                    <div id="kb-m16" class="grid-item green">M16</div>
+
+                    <div id="kb-clear" class="grid-item yellow">CLEAR</div>
+                    <div id="kb-backspace" class="grid-item yellow">BACK SPACE</div>
+                    <div id="kb-space" class="grid-item yellow">SPACE</div>
+                    <div id="kb-enter" class="grid-item red">ENTER</div>
+
+                    <div id="kb-init-cnt" class="grid-item green">INIT CNT</div>
+                    <div id="kb-trk-rpos" class="grid-item green">TRK RPOS</div>
+                    <div id="kb-trk-susp" class="grid-item green">TRK SUSP</div>
+                    <div id="kb-term-ctrl" class="grid-item green">TERM CTRL</div>
+                    <div id="kb-hnd-off" class="grid-item green">HND OFF</div>
+                    <div id="kb-flt-data" class="grid-item green">FLT DATA</div>
+                    <div id="kb-multi-func" class="grid-item green">MULTI FUNC</div>
+                    <div id="kb-f8" class="grid-item green">F8</div>
+                    <div id="kb-delta" class="grid-item yellow">Δ</div>
+                    <div id="kb-period" class="grid-item yellow">.</div>
+
+                    <div id="kb-f9" class="grid-item green">F9</div>
+                    <div id="kb-f10" class="grid-item green">F10</div>
+                    <div id="kb-ca" class="grid-item green">CA</div>
+                    <div id="kb-f12" class="grid-item green">F12</div>
+                    <div id="kb-f13" class="grid-item green">F13</div>
+                    <div id="kb-f14" class="grid-item green">F14</div>
+                    <div id="kb-tgt-gen" class="grid-item green">TGT GEN</div>
+                    <div id="kb-f16" class="grid-item green">F16</div>
+                    <div id="kb-ifr" class="grid-item yellow">IFR<br />+</div>
+                    <div id="kb-vfr" class="grid-item yellow">VFR<br />/</div>
+
+                    <div id="kb-a" class="grid-item">A</div>
+                    <div id="kb-B" class="grid-item">B</div>
+                    <div id="kb-c" class="grid-item">C</div>
+                    <div id="kb-d" class="grid-item">D</div>
+                    <div id="kb-e" class="grid-item">E</div>
+                    <div id="kb-f" class="grid-item">F</div>
+                    <div id="kb-g" class="grid-item">G</div>
+                    <div id="kb-1" class="grid-item turquoiseblue">1</div>
+                    <div id="kb-2" class="grid-item turquoiseblue">2</div>
+                    <div id="kb-3" class="grid-item turquoiseblue">3</div>
+
+                    <div id="kb-h" class="grid-item">H</div>
+                    <div id="kb-i" class="grid-item">I</div>
+                    <div id="kb-j" class="grid-item">J</div>
+                    <div id="kb-k" class="grid-item">K</div>
+                    <div id="kb-l" class="grid-item">L</div>
+                    <div id="kb-m" class="grid-item">M</div>
+                    <div id="kb-n" class="grid-item">N</div>
+                    <div id="kb-4" class="grid-item turquoiseblue">4</div>
+                    <div id="kb-5" class="grid-item turquoiseblue">5</div>
+                    <div id="kb-6" class="grid-item turquoiseblue">6</div>
+
+                    <div id="kb-o" class="grid-item">O</div>
+                    <div id="kb-p" class="grid-item">P</div>
+                    <div id="kb-q" class="grid-item">Q</div>
+                    <div id="kb-r" class="grid-item">R</div>
+                    <div id="kb-s" class="grid-item">S</div>
+                    <div id="kb-t" class="grid-item">T</div>
+                    <div id="kb-u" class="grid-item">U</div>
+                    <div id="kb-7" class="grid-item turquoiseblue">7</div>
+                    <div id="kb-8" class="grid-item turquoiseblue">8</div>
+                    <div id="kb-9" class="grid-item turquoiseblue">9</div>
+
+                    <div id="kb-v" class="grid-item">V</div>
+                    <div id="kb-w" class="grid-item">W</div>
+                    <div id="kb-x" class="grid-item">X</div>
+                    <div id="kb-y" class="grid-item">Y</div>
+                    <div id="kb-z" class="grid-item">Z</div>
+                    <div id="kb-*" class="grid-item">*</div>
+                    <div id="kb-blank1" class="grid-item"></div>
+                    <div id="kb-blank2" class="grid-item"></div>
+                    <div id="kb-0" class="grid-item turquoiseblue">0</div>
+                    <div id="kb-blank3" class="grid-item"></div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="row 2">
+            <div id="flights-list-container">
+                <table id="flights-list">
+                    <thead>
+                        <th>Arrival Code</th>
+                        <th>Aircraft Id</th>
+                        <th>Altitude</th>
+                        <th>Aircraft Type</th>
+                        <th>Groundspeed</th>
+                        <th>Flight Route</th>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        // const icon_url = 'https://openlayers.org/en/v4.6.5/examples/data/icon.png';
+        const icon_url = 'plane.svg';
+        const dataBlocks = [];
+        const routes = [];
+
+        // Global flight sim object
+        window.flightsim = {
+            pausedInternal: false,
+            pausedListener: function (val) { },
+            set paused(val) {
+                this.pausedInternal = val;
+                this.pausedListener(val);
+            },
+            get paused() {
+                return this.pausedInternal;
+            },
+            registerListener: function (listener) {
+                this.pausedListener = listener;
+            }
+        };
+
+        // Global timer object
+        window.timer = new Timer();
+        window.timer.start();
+
+        let cmds = [];  // List of previous commands
+
+        function updateCommandsList() {
+            const commandHistory = document.getElementById("inputs");
+            commandHistory.value = cmds.join("\n"); // Reset the list
+            commandHistory.scrollTop = commandHistory.scrollHeight;    // Scroll to the bottom
+        }
+
+        updateCommandsList();
+
+        document.getElementById("cmd").addEventListener('keypress', (event) => {
+            let cmd = document.getElementById("cmd");
+            // Check if the Enter key is pressed
+            if (event.key === "Enter" && cmd.value.trim() !== "") {
+                const command = cmd.value;
+
+                // Add the command to the command history and clear the input box
+                cmds.push(command);
+                cmd.value = "";
+                updateCommandsList();
+
+                // list of aircraft ids
+                const aircraftIds = flights.map(f => f.aircraftId);
+
+                // check if the command begins with an aircraft id
+                for (let aircraftId of aircraftIds) {
+                    if (command.startsWith(aircraftId)) {
+                        // operation - A, S, or H
+                        const operation = command.substring(aircraftId.length, aircraftId.length + 1);
+
+                        // new value to be set
+                        const newValue = command.substring(aircraftId.length + 1);
+
+                        // data block for the flight
+                        const flightDataBlock = dataBlocks.find(f => f.flight.aircraftId === aircraftId);
+
+                        // json object for the flight
+                        const flight2 = flights.find(f => f.aircraftId === aircraftId);
+
+                        // Do stuff based on the operation
+                        // A for altitude - 028 for 28000 feet
+                        // S for groundspeed - 22 for 220 knots
+                        // H for heading - 27 for 270 degrees
+                        switch (operation) {
+                            case "A":
+                                // Update values
+                                flight2.altitude = newValue * 1000;
+                                flightDataBlock.updateAltitude(newValue * 1000);
+                                redrawTable();
+                                break;
+                            case "S":
+                                // update values
+                                flightDataBlock.updateGroundspeed(newValue * 10);
+                                flight2.groundspeed = newValue * 10;
+                                redrawTable();
+                                break;
+                            case "H":
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                }
+            }
+        });
+
+        document.getElementById("cmd").addEventListener('keydown', (event) => {
+            let kb = document.getElementById(`kb-${event.code.toLowerCase()}`)
+                || document.getElementById(`kb-${event.key.toLowerCase()}`);
+            if (kb) {
+                kb.style.backgroundColor = "gray";
+
+            }
+        });
+
+        document.getElementById("cmd").addEventListener('keyup', (event) => {
+            let kb = document.getElementById(`kb-${event.code.toLowerCase()}`)
+                || document.getElementById(`kb-${event.key.toLowerCase()}`);
+            if (kb) {
+                kb.style.backgroundColor = "initial";
+
+            }
+        });
+
+        // playback speed dropdown
+        let playbackSpeed = document.getElementById('speed-playback').value;
+
+        // List of flights below the scope
+        function displayTable() {
+            for (let f of flights) {
+                const e = document.createElement("tr");
+                const htmlContent = `
+                    <td>${f.arrivalCode}</td>
+                    <td>${f.aircraftId}</td>
+                    <td>${f.altitude}</td>
+                    <td>${f.aircraftType}</td>
+                    <td>${f.groundspeed}</td>
+                    <td>${f.flightroute}</td>
+                `;
+                e.innerHTML = htmlContent;
+                document.querySelector('#flights-list > tbody').appendChild(e);
+            }
+        }
+
+        function clearTable() {
+            let element = document.querySelector("#flights-list > tbody");
+            while (element.firstChild) {
+                element.removeChild(element.firstChild);
+            }
+        }
+
+        function redrawTable() {
+            clearTable();
+            displayTable();
+        }
+
+        displayTable();
+
+
+        // draw the plane
+        function setPoints(flight) {
+            dataBlocks.push(new DataBlock(flight));
+        }
+
+        let lastTime = Date.now();
+        let distance = 0;
+
+        // Listener to update playback speed
+        document.getElementById('speed-playback').addEventListener('change', (event) => {
+            playbackSpeed = event.target.value;
+        });
+
+
+        function reloadSim() {
+            // Reset distance 
+            distance = 0;
+
+            // Update the input box back to original speed
+            document.getElementById('speed-playback').value = "1";
+
+            // Update the actual speed
+            playbackSpeed = document.getElementById('speed-playback').value;
+
+            // Restart timer
+            window.timer.restart();
+        }
+
+        // moves a single plane
+        // https://openlayers.org/en/latest/examples/feature-move-animation.html
+        function moveFeature(event, index) {
+            // change the number on the bottom of the fraction to adjust speed
+            const speed = Number(dataBlocks[index].flight.groundspeed / 1000);
+            const time = event.frameState.time;
+            const elapsedTime = time - lastTime;
+            distance = (distance + (speed * playbackSpeed * elapsedTime) / 1e6) % 2;
+            lastTime = time;
+
+            // between 0-1 - coordinate is where on the line the plane is currently at
+            // https://openlayers.org/en/latest/apidoc/module-ol_geom_LineString-LineString.html#getCoordinateAt
+            const currentCoordinate = routes[index].getGeometry().getCoordinateAt(
+                distance > 1 ? 2 - distance : distance
+            );
+
+            const position = dataBlocks[index].getGeometry();
+            position.setCoordinates(currentCoordinate);
+            const vectorContext = ol.render.getVectorContext(event);
+            // vectorContext.setStyle(styles.geoMarker);
+            dataBlocks[index].updateStyle(position);
+            vectorContext.drawGeometry(position.clone());
+            map.render();
+        }
+
+        // move all planes
+        function moveFeatures(event) {
+            if (!window.flightsim.paused) {
+                for (let i = 0; i < dataBlocks.length; i++) {
+                    moveFeature(event, i)
+                }
+            } else {
+                map.render();
+            }
+        }
+
+        // draw invisible lines which are the paths the planes follow
+        // See the yellow line in the following example: https://openlayers.org/en/latest/examples/feature-move-animation.html
+        function drawLines(flight) {
+            const origin = ol.proj.fromLonLat([flight.origin.long, flight.origin.lat]);
+            const destination = ol.proj.fromLonLat([flight.destination.long, flight.destination.lat]);
+            const feature = new ol.Feature({
+                geometry: new ol.geom.LineString([origin, destination]),
+                name: 'Line',
+            });
+            const style = [
+                // linestring
+                new ol.style.Style({
+                    stroke: new ol.style.Stroke({
+                        // color: 'green',
+                        color: [0, 0, 0, 0],
+                        width: 1
+                    })
+                })
+            ];
+            feature.setStyle(style);
+            routes.push(feature);
+        }
+
+        for (let flight of flights) {
+            setPoints(flight);
+            drawLines(flight);
+        }
+
+        // Planes
+        const vectorSourcePlanes = new ol.source.Vector({
+            features: dataBlocks
+        });
+        const vectorLayerPlanes = new ol.layer.Vector({
+            source: vectorSourcePlanes
+        });
+
+        // Routes
+        const vectorSourceRoutes = new ol.source.Vector({
+            features: routes
+        });
+        const vectorLayerRoutes = new ol.layer.Vector({
+            source: vectorSourceRoutes
+        });
+
+        // Start animating by default
+        vectorLayerPlanes.on('postrender', moveFeatures);
+
+        toggleAnimation = (paused) => {
+            playbackSpeed = document.getElementById('speed-playback').value;
+            if (paused === true) {
+                vectorLayerPlanes.un('postrender', moveFeature);
+            } else {
+                lastTime = Date.now();
+                vectorLayerPlanes.on('postrender', moveFeatures);
+            }
+        }
+
+        togglePlayPause = () => {
+            window.flightsim.paused = !window.flightsim.paused;
+            if (window.flightsim.paused) {
+                window.timer.pause();
+            } else {
+                window.timer.resume();
+            }
+        }
+
+        // // Toggle animation pause
+        window.flightsim.registerListener(toggleAnimation);
+
+        const attributions =
+            '<a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> ' +
+            '<a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>';
+
+        const map = new ol.Map({
+            target: 'map',
+            controls: [],
+            // interactions: [],
+            layers: [
+                new ol.layer.Tile({
+                    // source: new ol.source.OSM()
+                    source: new ol.source.XYZ({
+                        attributions: attributions,
+                        url: 'https://api.maptiler.com/maps/hybrid/{z}/{x}/{y}.jpg?key=' + 'sqnA3vuqXWfyY0K78JtW',
+                        tileSize: 512,
+                    }),
+                }),
+                vectorLayerPlanes,
+                vectorLayerRoutes
+            ],
+            view: new ol.View({
+                center: ol.proj.fromLonLat([-75.165222, 39.952583]),    // philly coords
+                zoom: 9,
+                // minZoom: 7,
+                // maxZoom: 13,
+            })
+        });
+    </script>
+</body>
+
+</html>
