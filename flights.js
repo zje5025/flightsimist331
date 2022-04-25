@@ -2,7 +2,7 @@ let flights = [
     {
         "aircraftId": "JIA5336",
         "altitude": 31000,
-        "aircraftType": "CRJ9",
+        "aircraftType": "Canadair Regional Jet CRJ-900",
         "groundspeed": 491,
         "flightroute":"ROCKT1 AHTIY JST BOJID2",
         "arrivalCode": "A",
@@ -20,7 +20,7 @@ let flights = [
     {
         "aircraftId": "RPA4818",
         "altitude": 33000,
-        "aircraftType": "E75L",
+        "aircraftType": "EMBRAER 175 ",
         "groundspeed": 497,
         "flightroute":"POMCT OWEBO HLG JST BOJID2",
         "arrivalCode": "A",
@@ -38,7 +38,7 @@ let flights = [
     {
         "aircraftId": "AAL2764",
         "altitude": 38000,
-        "aircraftType": "A319",
+        "aircraftType": "Airbus A321 ",
         "groundspeed": 513,
         "flightroute":"SSOXS6 SSOXS BUZRD SEY HTO RIFLE Q439 SARDI Q439 BRIGS JIIMS3",
         "arrivalCode": "A",
@@ -56,7 +56,7 @@ let flights = [
     {
         "aircraftId": "LXJ549",
         "altitude": 43000,
-        "aircraftType": "CL30",
+        "aircraftType": "Bombardier Challenger 300 ",
         "groundspeed": 543,
         "flightroute":" JST BOJID2",
         "arrivalCode": "A",
@@ -74,7 +74,7 @@ let flights = [
     {
         "aircraftId": "PDT6209",
         "altitude": 29000,
-        "aircraftType": "E145",
+        "aircraftType": "Embraer ERJ-145 ",
         "groundspeed": 516,
         "flightroute":" ISO J121 SWL JIIMS3",
         "arrivalCode": "A",
@@ -92,7 +92,7 @@ let flights = [
     {
         "aircraftId": "AAL2562",
         "altitude": 32000,
-        "aircraftType": "A319",
+        "aircraftType": "Airbus A321 ",
         "groundspeed": 533,
         "flightroute":"MXE PENSY J110 FLIRT J6 HVQ Q68 LITTR MEEOW FEWWW SEEVR4 ",
         "arrivalCode": "D",
@@ -110,7 +110,7 @@ let flights = [
     {
         "aircraftId": "RPA4514",
         "altitude": 22000,
-        "aircraftType": "E75L",
+        "aircraftType": "EMBRAER 175 ",
         "groundspeed": 356,
         "flightroute":" MXE PENSY J110 VINSE DEMME4",
         "arrivalCode": "D",
@@ -128,7 +128,7 @@ let flights = [
     {
         "aircraftId": "RPA5625",
         "altitude": 174000,
-        "aircraftType": "E75L",
+        "aircraftType": "EMBRAER 175",
         "groundspeed": 438,
         "flightroute":"DITCH Q437 HNNAH Q450 JFK ROBUC3",
         "arrivalCode": "D",
@@ -146,7 +146,7 @@ let flights = [
     {
         "aircraftId": "N350WC",
         "altitude": 32000,
-        "aircraftType": "C560",
+        "aircraftType": "Cessna Citation V ",
         "groundspeed": 420,
         "flightroute":"OOD TEBEE HAYDO TRPOD TAQLE1",
         "arrivalCode": "D",
@@ -164,7 +164,7 @@ let flights = [
     {
         "aircraftId": "AAL805",
         "altitude": 34000,
-        "aircraftType": "A321",
+        "aircraftType": "Airbus A321",
         "groundspeed": 459,
         "flightroute":"STOEN Q75 ENEME EVANZ Q109 KNOST M219 NAVVL L465 SHARQ UM463 WALKY UB879 CUN",
         "arrivalCode": "D",
@@ -182,7 +182,7 @@ let flights = [
     {
         "aircraftId": "PDT6180",
         "altitude": 15000,
-        "aircraftType": "E145",
+        "aircraftType": "Embraer ERJ-145 ",
         "groundspeed": 444,
         "flightroute":"HAR BOJID2",
         "arrivalCode": "E",
@@ -200,7 +200,7 @@ let flights = [
     {
         "aircraftId": "N246JP",
         "altitude": 5400,
-        "aircraftType": "S22T",
+        "aircraftType": "Cirrus SR22 Turbo",
         "groundspeed": 197,
         "flightroute":"BAL V214 ODESA OOD ",
         "arrivalCode": "E",
@@ -218,7 +218,7 @@ let flights = [
     {
         "aircraftId": "ASH6345",
         "altitude": 4400,
-        "aircraftType": "E75L",
+        "aircraftType": "EMBRAER 175",
         "groundspeed": 321,
         "flightroute":"MMUGS4 GUSTI Q22 BEARI FAK PAATS3",
         "arrivalCode": "E",
@@ -236,7 +236,7 @@ let flights = [
     {
         "aircraftId": "AAL551",
         "altitude": 6200,
-        "aircraftType": "A321",
+        "aircraftType": "Airbus A321",
         "groundspeed": 308,
         "flightroute":"FOLZZ1 ALYRA PELCN AR18 DIW WETRO CEBEE SWL JIIMS3",
         "arrivalCode": "E",
@@ -254,7 +254,7 @@ let flights = [
     {
         "aircraftId": "PDT6137",
         "altitude": 19000,
-        "aircraftType": "E145",
+        "aircraftType": "Embraer ERJ-145 ",
         "groundspeed": 479,
         "flightroute":"SCHOL DUNFE J121 SWL JIIMS3",
         "arrivalCode": "E",

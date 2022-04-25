@@ -1,15 +1,18 @@
-
 <!doctype html>
 <html lang="en">
+
 <head>
-    <!--This is just the style for the data block, map,keyboard,flights list, colors for keyboard
-    and sim controls (play,pause,reload) (#container-sets the style for anything that has a # with a container next to it, . is the classes)-->
     <meta charset="utf-8">
     <link rel="stylesheet"
         href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.13.0/css/ol.css" type="text/css">
     <style>
         body {
             font-family: Arial, sans-serif;
+        }
+
+        .dark-mode {
+            background-color: #181818;
+            color: white;
         }
 
         #container {
@@ -49,10 +52,6 @@
             justify-content: end;
         }
 
-        #cmd,
-        #inputs {
-            text-transform: uppercase;
-        }
 
         #keyboard-container {
             margin-top: auto;
@@ -62,7 +61,7 @@
         #keyboard {
             display: grid;
             grid-template-columns: repeat(10, 60px);
-            grid-template-rows: repeat(9, 50px);
+            grid-template-rows: repeat(7, 50px);
             grid-gap: 5px;
             padding-top: 20px;
         }
@@ -96,11 +95,9 @@
             background-color: red;
         }
 
-
         .turquoiseblue {
             background-color: rgba(12, 255, 255, 0.808);
         }
-
         .green {
             background-color: rgb(6, 187, 6);
         }
@@ -117,17 +114,15 @@
             <div id="map-container">
                 <div id="map" class="map"></div>
                 <!-- <script src="https://code.jquery.com/jquery-3.6.0.min.js" type="text/javascript"></script> -->
-                <!-- <script src="https://cdn.jsdelivr.net/npm/geodesy@2.4.0/latlon-spherical.min.js" type="text/javascript"></script> -->
-                <!-- import the files -->
+                <!-- import the flights -->
                 <script src="flights.js" type="text/javascript"></script>
                 <script src="data-block.js" type="text/javascript"></script>
                 <script src="timer.js" type="text/javascript"></script>
-                <script src="extra-degree-calculation.js" type="text/javascript"></script>
+                <script src="utils.js" type="text/javascript"></script>
 
-                <!--Different settings for sim controls(play,pause,reload), and 
-                speed options-->
+
                 <div id="sim-controls">
-                    <button id="reload-sim">Reload</button>
+                    <button onclick="reloadSim()">Reload</button>
                     <div id="sim-time">00:00</div>
                     <select id="speed-playback" name="speed-playback">
                         <option id="speed-playback-default" value="1">x1</option>
@@ -135,11 +130,8 @@
                         <option value="4">x4</option>
                         <option value="10">x10</option>
                         <option value="20">x20</option>
-                        <option value="100">x100</option>
-                        <option value="200">x200</option>
-                        <option value="500">x500</option>
                     </select>
-                    <button id="play-pause">Play/Pause</button>
+                    <button onclick="togglePlayPause()">Play/Pause</button>
                 </div>
             </div>
 
@@ -243,7 +235,7 @@
             </div>
 
         </div>
-        <!--This is the flights list table getting filled with the correct data-->
+
         <div class="row 2">
             <div id="flights-list-container">
                 <table id="flights-list">
@@ -261,14 +253,12 @@
             </div>
         </div>
     </div>
-    <script type="module">
-        // Importing the LatLon libaries
-        // const sets variables that cant be changed
-        import LatLon from 'https://cdn.jsdelivr.net/npm/geodesy@2.4.0/latlon-spherical.min.js';
+
+    <script type="text/javascript">
+        // const icon_url = 'https://openlayers.org/en/v4.6.5/examples/data/icon.png';
         const icon_url = 'plane.svg';
         const dataBlocks = [];
         const routes = [];
-        const destinations = [];
 
         // Global flight sim object
         window.flightsim = {
@@ -283,18 +273,18 @@
             },
             registerListener: function (listener) {
                 this.pausedListener = listener;
-            },
+            }
         };
 
         // Global timer object
         window.timer = new Timer();
         window.timer.start();
 
-        // Updating text above keyboard
         let cmds = [];  // List of previous commands
+
         function updateCommandsList() {
             const commandHistory = document.getElementById("inputs");
-            commandHistory.value = cmds.join("\n"); // Resets the list
+            commandHistory.value = cmds.join("\n"); // Reset the list
             commandHistory.scrollTop = commandHistory.scrollHeight;    // Scroll to the bottom
         }
 
@@ -302,88 +292,51 @@
 
         document.getElementById("cmd").addEventListener('keypress', (event) => {
             let cmd = document.getElementById("cmd");
-            // Checks if the Enter key is pressed
-            // And the input box is not empty
+            // Check if the Enter key is pressed
             if (event.key === "Enter" && cmd.value.trim() !== "") {
                 const command = cmd.value;
 
-                // Adds the command to the command history and clears the input box
+                // Add the command to the command history and clear the input box
                 cmds.push(command);
                 cmd.value = "";
                 updateCommandsList();
 
-                // List of aircraft ids
+                // list of aircraft ids
                 const aircraftIds = flights.map(f => f.aircraftId);
 
-                // Check if the command begins with an aircraft id
+                // check if the command begins with an aircraft id
                 for (let aircraftId of aircraftIds) {
                     if (command.startsWith(aircraftId)) {
                         // operation - A, S, or H
                         const operation = command.substring(aircraftId.length, aircraftId.length + 1);
 
-                        // New value to be set
-                        let newValue = command.substring(aircraftId.length + 1);
+                        // new value to be set
+                        const newValue = command.substring(aircraftId.length + 1);
 
-                        // Data block for the flight
+                        // data block for the flight
                         const flightDataBlock = dataBlocks.find(f => f.flight.aircraftId === aircraftId);
 
-                        // Json object for the flight
+                        // json object for the flight
                         const flight2 = flights.find(f => f.aircraftId === aircraftId);
 
-                        // A for altitude 
-                        // S for groundspeed 
-                        // H for heading 
+                        // Do stuff based on the operation
+                        // A for altitude - 028 for 28000 feet
+                        // S for groundspeed - 22 for 220 knots
+                        // H for heading - 27 for 270 degrees
                         switch (operation) {
                             case "A":
+                                // Update values
                                 flight2.altitude = newValue * 1000;
                                 flightDataBlock.updateAltitude(newValue * 1000);
                                 redrawTable();
                                 break;
                             case "S":
+                                // update values
                                 flightDataBlock.updateGroundspeed(newValue * 10);
                                 flight2.groundspeed = newValue * 10;
                                 redrawTable();
                                 break;
                             case "H":
-                                // Convert the value from a string into an integer
-                                newValue = newValue * 1;
-
-                                let currentPosition = flightDataBlock.getCurrentPosition();
-
-                                // A point on the current path in the near distance
-                                // Used to calculate new heading(degrees) 
-        
-                                let distantPosition = flightDataBlock.route.getGeometry().getCoordinateAt(flightDataBlock.currentDistance + 0.01);
-
-                                // let lastCoords = ol.proj.toLonLat(flightDataBlock.route.getGeometry().getLastCoordinate());
-
-                                // Converts the flat coordinates to longitude/latitude
-                                // Flat coordinates are the first basic coordinates
-                                let c1 = ol.proj.toLonLat(currentPosition);
-                                let c2 = ol.proj.toLonLat(distantPosition);
-
-                                // Loads the coordinates into the library
-                                // so we can functions to calculate heading
-                                // https://github.com/chrisveness/geodesy
-                                const p1 = new LatLon(c1[1], c1[0]);
-                                const p2 = new LatLon(c2[1], c2[0]);
-
-                                // Average of the initial and final headings - this seems to make it work :)
-                                const midHeading = (p1.initialBearingTo(p2) + p1.finalBearingTo(p2)) / 2;
-
-                                // Update route heading rotates, plane whatever degrees we input
-                                flightDataBlock.route.getGeometry().rotate(
-                                    // reset the heading ( toRadians(360) + toRadians(midHeading) )
-                                    // then add the new value ( toRadians(newValue) )
-                                    toRadians(360) + toRadians(midHeading) - toRadians(newValue),
-                                    flightDataBlock.getCurrentPosition()
-                                );
-
-                                // Updates plane image heading
-                                flightDataBlock.getStyle()[0].getImage().setRotation(
-                                    toRadians(newValue)
-                                );
-                                // redrawTable();
                                 break;
                             default:
                                 break;
@@ -393,7 +346,6 @@
             }
         });
 
-        // Highlights key on keyboard that was pressed
         document.getElementById("cmd").addEventListener('keydown', (event) => {
             let kb = document.getElementById(`kb-${event.code.toLowerCase()}`)
                 || document.getElementById(`kb-${event.key.toLowerCase()}`);
@@ -403,7 +355,6 @@
             }
         });
 
-        // Removes highlight after pressing key on keyboard
         document.getElementById("cmd").addEventListener('keyup', (event) => {
             let kb = document.getElementById(`kb-${event.code.toLowerCase()}`)
                 || document.getElementById(`kb-${event.key.toLowerCase()}`);
@@ -413,10 +364,10 @@
             }
         });
 
-        // Playback speed dropdown for the 10x,20x,etc
+        // playback speed dropdown
         let playbackSpeed = document.getElementById('speed-playback').value;
 
-        // Displays flight list table
+        // List of flights below the scope
         function displayTable() {
             for (let f of flights) {
                 const e = document.createElement("tr");
@@ -432,8 +383,7 @@
                 document.querySelector('#flights-list > tbody').appendChild(e);
             }
         }
-            // clearTable is wiping flight list table clean, used for the keyboard commands and then inputing those
-            // new values back into the table
+
         function clearTable() {
             let element = document.querySelector("#flights-list > tbody");
             while (element.firstChild) {
@@ -448,150 +398,76 @@
 
         displayTable();
 
+
+        // draw the plane
+        function setPoints(flight) {
+            dataBlocks.push(new DataBlock(flight));
+        }
+
         let lastTime = Date.now();
         let distance = 0;
 
-        // Updates speed when user changes it, ex. user clicks 20x
+        // Listener to update playback speed
         document.getElementById('speed-playback').addEventListener('change', (event) => {
             playbackSpeed = event.target.value;
         });
 
+
         function reloadSim() {
-            vectorLayerPlanes.un('postrender', moveFeatures);
-
-            // Resets time & distance 
+            // Reset distance 
             distance = 0;
-            lastTime = Date.now();
 
-            // Reset finished
-            for (let flight of dataBlocks) {
-                flight.set("finished", false);
-            }
-
-            // Clears arrays
-            dataBlocks.splice(0, dataBlocks.length);
-            routes.splice(0, routes.length);
-            destinations.splice(0, destinations.length);
-
-            // Reloads layers
-            for (let i = 0; i < flights.length; i++) {
-                drawDataBlock(flights[i]);
-                drawRoute(flights[i]);
-                drawDestination(flights[i]);
-            }
-
-            // Resets planes
-            vectorLayerPlanes = new ol.layer.Vector({
-                source: new ol.source.Vector({
-                    features: dataBlocks
-                })
-            });
-
-            // Resets routes
-            vectorLayerRoutes = new ol.layer.Vector({
-                source: new ol.source.Vector({
-                    features: routes
-                })
-            });
-
-            // Resets destinations
-            vectorLayerDestinations = new ol.layer.Vector({
-                source: new ol.source.Vector({
-                    features: destinations
-                })
-            });
-
-            // Resets map layers
-            map.setLayers([
-                new ol.layer.Tile({
-                    // source: new ol.source.OSM()
-                    source: new ol.source.XYZ({
-                        attributions: attributions,
-                        url: 'https://api.maptiler.com/maps/hybrid/{z}/{x}/{y}.jpg?key=' + 'sqnA3vuqXWfyY0K78JtW',
-                        tileSize: 512,
-                    }),
-                }),
-                vectorLayerPlanes,
-                vectorLayerRoutes,
-                vectorLayerDestinations
-            ]);
-
-            // Updates the input box back to original speed
+            // Update the input box back to original speed
             document.getElementById('speed-playback').value = "1";
 
-            // Updates the actual speed
+            // Update the actual speed
             playbackSpeed = document.getElementById('speed-playback').value;
 
-            // Restarts timer
+            // Restart timer
             window.timer.restart();
-
-            vectorLayerPlanes.on('postrender', moveFeatures);
-            map.render();
         }
 
-        
-        // In this library (OpenLayers) they call the animation of the datablock and plane a feature
-        // And all of the calculations below tell the program how much to animate everything
+        // moves a single plane
         // https://openlayers.org/en/latest/examples/feature-move-animation.html
         function moveFeature(event, index) {
-            const flight = dataBlocks[index];
-            let distance = flight.currentDistance;
-            let lastTime = flight.lastTime
-            if (!flight.get('finished')) {
-                if (flight.destination.getGeometry().intersectsCoordinate(flight.getGeometry().getCoordinates())) {
-                    console.log(`${flight.flight.aircraftId} has reached its destination`);
-                    flight.set("finished", true);
-                    flight.setStyle(new ol.style.Style({}));
-                }
-                // Changes the number on the bottom of the fraction to adjust speed
-                const speed = Number(flight.flight.groundspeed / 50000);
-                const time = event.frameState.time;
-                const elapsedTime = time - lastTime;
-                distance = (distance + (speed * playbackSpeed * elapsedTime) / 1e6) % 2;
-                lastTime = time;
+            // change the number on the bottom of the fraction to adjust speed
+            const speed = Number(dataBlocks[index].flight.groundspeed / 1000);
+            const time = event.frameState.time;
+            const elapsedTime = time - lastTime;
+            distance = (distance + (speed * playbackSpeed * elapsedTime) / 1e6) % 2;
+            lastTime = time;
 
-                distance = distance > 1 ? 2 - distance : distance;
+            // between 0-1 - coordinate is where on the line the plane is currently at
+            // https://openlayers.org/en/latest/apidoc/module-ol_geom_LineString-LineString.html#getCoordinateAt
+            const currentCoordinate = routes[index].getGeometry().getCoordinateAt(
+                distance > 1 ? 2 - distance : distance
+            );
 
-                flight.currentDistance = distance;
-                flight.lastTime = time;
-
-                // Between 0-1 - coordinate is where on the line the plane is currently at
-                // https://openlayers.org/en/latest/apidoc/module-ol_geom_LineString-LineString.html#getCoordinateAt
-                const currentCoordinate = routes[index].getGeometry().getCoordinateAt(
-                    distance > 1 ? 2 - distance : distance
-                );
-
-                const position = flight.getGeometry();
-                position.setCoordinates(currentCoordinate);
-                const vectorContext = ol.render.getVectorContext(event);
-                // vectorContext.setStyle(styles.geoMarker);
-
-                vectorContext.drawGeometry(position.clone());
-            }
+            const position = dataBlocks[index].getGeometry();
+            position.setCoordinates(currentCoordinate);
+            const vectorContext = ol.render.getVectorContext(event);
+            // vectorContext.setStyle(styles.geoMarker);
+            dataBlocks[index].updateStyle(position);
+            vectorContext.drawGeometry(position.clone());
             map.render();
         }
 
-        // Feature/function for the animation, this loops through the animation for each flight
+        // move all planes
         function moveFeatures(event) {
             if (!window.flightsim.paused) {
                 for (let i = 0; i < dataBlocks.length; i++) {
-                    moveFeature(event, i);
+                    moveFeature(event, i)
                 }
             } else {
                 map.render();
             }
         }
 
-        function drawDataBlock(flight) {
-            dataBlocks.push(new DataBlock(flight, LatLon));
-        }
-
-        // Draws invisible lines which are the paths the planes follow for degrees command
-        function drawRoute(flight) {
-            // const origin = ol.proj.fromLonLat([flight.origin.long, flight.origin.lat]);
-            // const destination = ol.proj.fromLonLat([flight.destination.long, flight.destination.lat]);
-            const destination = ol.proj.fromLonLat([flight.origin.long, 80]);   // north pole
-            const origin = ol.proj.fromLonLat([flight.origin.long, -80]);   // south pole
+        // draw invisible lines which are the paths the planes follow
+        // See the yellow line in the following example: https://openlayers.org/en/latest/examples/feature-move-animation.html
+        function drawLines(flight) {
+            const origin = ol.proj.fromLonLat([flight.origin.long, flight.origin.lat]);
+            const destination = ol.proj.fromLonLat([flight.destination.long, flight.destination.lat]);
             const feature = new ol.Feature({
                 geometry: new ol.geom.LineString([origin, destination]),
                 name: 'Line',
@@ -600,138 +476,51 @@
                 // linestring
                 new ol.style.Style({
                     stroke: new ol.style.Stroke({
-                        color: [0, 0, 0, 0], // invisible
-                        // color: "yellow",
+                        // color: 'green',
+                        color: [0, 0, 0, 0],
                         width: 1
                     })
                 })
             ];
-
-            const flightOrigin = ol.proj.fromLonLat([flight.origin.long, flight.origin.lat]);
-            const closestPoint = feature.getGeometry().getClosestPoint(flightOrigin);
-            const f = dataBlocks.find(f => f.flight.aircraftId === flight.aircraftId);
-            f.route = feature;
-
             feature.setStyle(style);
             routes.push(feature);
-
-            // Sets initial heading
-            feature.getGeometry().rotate(
-                -f.getHeading(),
-                flightOrigin
-            );
-
-            const distFromOrigin = f.getDistanceFromOrigin();
-            const distToDestination = f.getDistanceToDestination();
-            const totalDistance = feature.getGeometry().getLength();
-            const d = distFromOrigin / totalDistance
-
-            // Position on the line
-            // percent between 0-1
-            f.currentDistance = d > 1 ? 2 - d : d;
-        }
-        // This function draws the destination for each flight on the stimulation, this checks to see if the flight arrived at the destination based on the coordinates
-        function drawDestination(flight) {
-            const destination = ol.proj.fromLonLat([flight.destination.long, flight.destination.lat]);
-            const feature = new ol.Feature({
-                geometry: new ol.geom.Circle(destination, 2000),
-                name: 'Destination',
-            });
-
-            // https://openlayers.org/en/latest/examples/custom-circle-render.html
-            const circle = new ol.style.Style({
-                renderer(coordinates, state) {
-                    const [[x, y], [x1, y1]] = coordinates;
-                    const ctx = state.context;
-                    const dx = x1 - x;
-                    const dy = y1 - y;
-                    const radius = Math.sqrt(dx * dx + dy * dy);
-
-                    const innerRadius = 0;
-                    const outerRadius = radius * 1.4;
-
-                    const gradient = ctx.createRadialGradient(
-                        x,
-                        y,
-                        innerRadius,
-                        x,
-                        y,
-                        outerRadius
-                    );
-                    // gradient.addColorStop(0, 'rgba(255,0,0,0)');
-                    // gradient.addColorStop(0.6, 'rgba(255,0,0,0.2)');
-                    // gradient.addColorStop(1, 'rgba(255,0,0,0.8)');
-                    gradient.addColorStop(0, 'rgba(255,0,0,0)');
-                    gradient.addColorStop(0.6, 'rgba(255,0,0,0)');
-                    gradient.addColorStop(1, 'rgba(255,0,0,0)');
-                    ctx.beginPath();
-                    ctx.arc(x, y, radius, 0, 2 * Math.PI, true);
-                    ctx.fillStyle = gradient;
-                    ctx.fill();
-
-                    ctx.arc(x, y, radius, 0, 2 * Math.PI, true);
-                    // ctx.strokeStyle = 'rgba(255,0,0,1)'; // red
-                    ctx.strokeStyle = 'rgba(255,0,0,0)';    // invisible
-                    ctx.stroke();
-                },
-            });
-            feature.setStyle(circle);
-            destinations.push(feature);
-            const f = dataBlocks.find(f => f.flight.aircraftId === flight.aircraftId);
-            f.destination = feature;
         }
 
         for (let flight of flights) {
-            drawDataBlock(flight);
-            drawRoute(flight);
-            drawDestination(flight);
+            setPoints(flight);
+            drawLines(flight);
         }
 
         // Planes
-        // Helps render the planes (datablock),routes, and destinations on the stimulation, routes and destination are invisible
-        // OpenLayers= GoogleMaps
-        // This is from the open layers library
-        let vectorSourcePlanes = new ol.source.Vector({
+        const vectorSourcePlanes = new ol.source.Vector({
             features: dataBlocks
         });
-        let vectorLayerPlanes = new ol.layer.Vector({
+        const vectorLayerPlanes = new ol.layer.Vector({
             source: vectorSourcePlanes
         });
 
         // Routes
-        let vectorSourceRoutes = new ol.source.Vector({
+        const vectorSourceRoutes = new ol.source.Vector({
             features: routes
         });
-        let vectorLayerRoutes = new ol.layer.Vector({
+        const vectorLayerRoutes = new ol.layer.Vector({
             source: vectorSourceRoutes
         });
 
-        // Destinations
-        let vectorSourceDestinations = new ol.source.Vector({
-            features: destinations
-        });
-        let vectorLayerDestinations = new ol.layer.Vector({
-            source: vectorSourceDestinations
-        });
-
-        // Start animating by default when first opening page
+        // Start animating by default
         vectorLayerPlanes.on('postrender', moveFeatures);
 
-        const toggleAnimation = (paused) => {
+        toggleAnimation = (paused) => {
             playbackSpeed = document.getElementById('speed-playback').value;
             if (paused === true) {
-                vectorLayerPlanes.un('postrender', moveFeatures);
+                vectorLayerPlanes.un('postrender', moveFeature);
             } else {
                 lastTime = Date.now();
-                for (let flight of dataBlocks) {
-                    flight.lastTime = Date.now();
-                }
                 vectorLayerPlanes.on('postrender', moveFeatures);
-                map.render();
             }
         }
 
-        function togglePlayPause() {
+        togglePlayPause = () => {
             window.flightsim.paused = !window.flightsim.paused;
             if (window.flightsim.paused) {
                 window.timer.pause();
@@ -740,12 +529,8 @@
             }
         }
 
-        // // Toggles animation pause
+        // // Toggle animation pause
         window.flightsim.registerListener(toggleAnimation);
-
-        // Adds buttons for listeners (play-pause and reload)
-        document.getElementById("play-pause").addEventListener("click", togglePlayPause, false);
-        document.getElementById("reload-sim").addEventListener("click", reloadSim, false);
 
         const attributions =
             '<a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> ' +
@@ -765,8 +550,7 @@
                     }),
                 }),
                 vectorLayerPlanes,
-                // vectorLayerRoutes,
-                // vectorLayerDestinations
+                vectorLayerRoutes
             ],
             view: new ol.View({
                 center: ol.proj.fromLonLat([-75.165222, 39.952583]),    // philly coords

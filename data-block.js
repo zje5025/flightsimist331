@@ -1,33 +1,19 @@
-
 // https://openlayers.org/en/latest/apidoc/module-ol_Feature-Feature.html
-// https://github.com/chrisveness/geodesy
 
 class DataBlock extends ol.Feature {
 
     iconUrl = "plane.svg";
-    flight;
-    lastTime;
-    currentDistance;
-    heading;
-    LatLon;
-    destination;
 
-    constructor(flight, LatLon) {
-        super({
-            geometry: new ol.geom.Point(ol.proj.fromLonLat([flight.origin.long, flight.origin.lat])),
-            finished: false
-        });
-
-        this.LatLon = LatLon;
+    constructor(flight) {
+        super(new ol.geom.Point(ol.proj.fromLonLat([flight.origin.long, flight.origin.lat])));
         this.flight = flight;
-        this.currentDistance = 0;
-        this.lastTime = Date.now();
-        this.heading1 = (new LatLon(flight.origin.lat, flight.origin.long)).initialBearingTo(
-            new LatLon(flight.destination.lat, flight.destination.long)
-        );
-        this.heading2 = (new LatLon(flight.origin.lat, flight.origin.long)).finalBearingTo(
-            new LatLon(flight.destination.lat, flight.destination.long)
-        );
+        const plane = new ol.style.Style({
+            image: new ol.style.Icon({
+                scale: 0.15,
+                // rotation: rotation,
+                src: this.iconUrl
+            })
+        });
 
         const callsign = flight.aircraftId;
         const altitude = flight.altitude;
@@ -37,6 +23,9 @@ class DataBlock extends ol.Feature {
         const origin = this.getGeometry().getCoordinates();
         const destination = this.getGeometry().clone().getCoordinates();
         destination[1] = destination[1] - 20000;
+
+        // const a = ol.proj.fromLonLat([flight.origin.long, flight.origin.lat]);
+        // const b = ol.proj.fromLonLat([flight.origin.long, flight.origin.lat]);
 
         const labelStyle = new ol.style.Style({
             text: new ol.style.Text({
@@ -49,7 +38,7 @@ class DataBlock extends ol.Feature {
                 `,
                 textAlign: 'left',
                 offsetX: -75,
-                offsetY: -60,
+                offsetY: -20,
                 font: '14px Calibri,sans-serif',
                 overflow: true,
                 fill: new ol.style.Fill({
@@ -62,48 +51,55 @@ class DataBlock extends ol.Feature {
             })
         });
 
-        const plane = new ol.style.Style({
-            image: new ol.style.Icon({
-                scale: 0.15,
-                rotation: this.getHeading(),
-                src: "plane.svg"
+        const line = new ol.style.Style({
+            geometry: new ol.geom.LineString([origin, destination]),
+            stroke: new ol.style.Stroke({
+                fill: 'green',
+                width: 2
             })
         });
 
-        this.setStyle([plane, labelStyle]);
+        const circle = new ol.style.Style({
+            geometry: new ol.geom.Point(origin, destination),
+            image: new ol.style.Circle({
+                radius: 5,
+                fill: new ol.style.Fill({
+                    color: '#000'
+                }),
+                stroke: new ol.style.Stroke({
+                    fill: '#ADD8E6',
+                    width: 2
+                })
+            })
+        });
+        // let c = this.getGeometry().getCoordinates();
+        // c[1] = c[1] - 20;
+
+        this.setStyle([line, circle, labelStyle]);
     }
 
-    getHeading() {
-        // Average of initial and final heading
-        return toRadians((this.heading1 + this.heading2) / 2);
-    }
-
-    getDistanceToDestination() {
-        const origin = ol.proj.fromLonLat([this.flight.origin.long, this.flight.origin.lat]);
-        const route = this.route.getGeometry();
-        const distFromOrigin = getDistance(
-            route.getCoordinates()[1][0],
-            route.getCoordinates()[1][1],
-            route.getClosestPoint(origin)[0],
-            route.getClosestPoint(origin)[1],
-        );
-        return distFromOrigin;
-    }
-
-    getDistanceFromOrigin() {
-        const origin = ol.proj.fromLonLat([this.flight.origin.long, this.flight.origin.lat]);
-        const route = this.route.getGeometry();
-        const distToDestination = getDistance(
-            route.getClosestPoint(origin)[0],
-            route.getClosestPoint(origin)[1],
-            route.getCoordinates()[0][0],
-            route.getCoordinates()[0][1],
-        );
-        return distToDestination;
-    }
-
-    getCurrentPosition() {
-        return this.route.getGeometry().getCoordinateAt(this.currentDistance);
+    updateStyle(position) {
+        const origin = position.getCoordinates();
+        const destination = position.clone().getCoordinates();
+        destination[1] = destination[1] - 30000;
+        const line = new ol.style.Style({
+            geometry: new ol.geom.LineString([origin, destination]),
+            stroke: new ol.style.Stroke({
+                color: 'green',
+                width: 3
+            })
+        });
+        const circle = new ol.style.Style({
+            geometry: new ol.geom.Point(destination, destination),
+            image: new ol.style.Circle({
+                radius: 5,
+                fill: new ol.style.Fill({
+                    color: '#ADD8E6'
+                })
+            })
+        });
+        this.getStyle()[0] = line;
+        this.getStyle()[1] = circle;
     }
 
     updateAltitude(newAltitude) {
@@ -114,7 +110,7 @@ class DataBlock extends ol.Feature {
                 ${this.flight.groundspeed}
                 ${this.flight.destination.name}
         `;
-        this.getStyle()[1].getText().setText(text);
+        this.getStyle()[2].getText().setText(text);
     }
 
     updateGroundspeed(newGroundspeed) {
@@ -125,6 +121,6 @@ class DataBlock extends ol.Feature {
                 ${newGroundspeed}
                 ${this.flight.destination.name}
         `;
-        this.getStyle()[1].getText().setText(text);
+        this.getStyle()[2].getText().setText(text);
     }
 }
